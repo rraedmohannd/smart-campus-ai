@@ -1,78 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
-from app.db import get_db
-from app.models.models import Student
-from app.services.auth_service import verify_password, hash_password, create_access_token
+from app.demo_data import demo_users
 
 router = APIRouter()
 
-
-class LoginRequest(BaseModel):
+class LoginIn(BaseModel):
     student_id: str
     password: str
 
-
-class RegisterRequest(BaseModel):
-    student_id: str
-    name: str
-    email: str
-    password: str
-    department: Optional[str] = None
-
-
-class AuthResponse(BaseModel):
-    token: str
-    student_id: str
-    name: str
-    department: Optional[str]
-
-
-@router.post("/login", response_model=AuthResponse)
-def login(request: LoginRequest, db: Session = Depends(get_db)):
-    student = db.query(Student).filter(Student.student_id == request.student_id).first()
-    if not student:
-        raise HTTPException(status_code=401, detail="Student ID not found")
-    if not verify_password(request.password, student.password):
-        raise HTTPException(status_code=401, detail="Incorrect password")
-
-    token = create_access_token({"sub": student.student_id})
-
-    return AuthResponse(
-        token=token,
-        student_id=student.student_id,
-        name=student.name,
-        department=student.department
+@router.post("/login")
+def login(payload: LoginIn):
+    user = next(
+        (u for u in demo_users if u["student_id"] == payload.student_id and u["password"] == payload.password),
+        None
     )
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
-
-@router.post("/register", response_model=AuthResponse)
-def register(request: RegisterRequest, db: Session = Depends(get_db)):
-    existing = db.query(Student).filter(
-        (Student.student_id == request.student_id) | (Student.email == request.email)
-    ).first()
-
-    if existing:
-        raise HTTPException(status_code=400, detail="Student ID or email already registered")
-
-    student = Student(
-        student_id=request.student_id,
-        name=request.name,
-        email=request.email,
-        password=hash_password(request.password),
-        department=request.department,
-    )
-
-    db.add(student)
-    db.commit()
-    db.refresh(student)
-
-    token = create_access_token({"sub": student.student_id})
-
-    return AuthResponse(
-        token=token,
-        student_id=student.student_id,
-        name=student.name,
-        department=student.department
-    )
+    return {
+        "message": "Login successful",
+        "student_id": user["student_id"],
+        "name": user["name"],
+        "email": user["email"],
+        "token": f"demo_token_{user['student_id']}"
+    }
