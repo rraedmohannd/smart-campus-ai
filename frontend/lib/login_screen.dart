@@ -1,59 +1,60 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  LoginScreenState createState() => LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _idController = TextEditingController();
-  final TextEditingController _nameController = TextEditingController();
-  bool _loading = false;
+class _LoginScreenState extends State<LoginScreen> {
+  final _idController = TextEditingController();
+  final _pwController = TextEditingController();
 
-  @override
-  void dispose() {
-    _idController.dispose();
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  void _login() {
-    final id = _idController.text.trim();
-    final name = _nameController.text.trim();
-    if (id.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter student ID')));
-      return;
-    }
-    setState(() => _loading = true);
-    // In this project we simply navigate to HomeScreen with studentId.
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => HomeScreen(studentId: id, studentName: name.isEmpty ? null : name),
-      ),
+  Future<void> _login() async {
+    final response = await http.post(
+      Uri.parse('http://127.0.0.1:8000/auth/login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'student_id': _idController.text,
+        'password': _pwController.text,
+      }),
     );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => HomeScreen(
+            studentId: data['student_id'],
+            name: data['name'],
+            token: data['token'],
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid credentials')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login'), backgroundColor: const Color(0xFF9E1B22)),
+      appBar: AppBar(title: const Text('Login')),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             TextField(controller: _idController, decoration: const InputDecoration(labelText: 'Student ID')),
-            const SizedBox(height: 12),
-            TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Student Name (optional)')),
+            TextField(controller: _pwController, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _loading ? null : _login,
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF9E1B22)),
-              child: _loading ? const CircularProgressIndicator(color: Colors.white) : const Text('Login'),
-            ),
+            ElevatedButton(onPressed: _login, child: const Text('Login')),
           ],
         ),
       ),

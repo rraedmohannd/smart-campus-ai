@@ -15,7 +15,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(chat.router, prefix="/chat", tags=["chat"])
 app.include_router(buses.router, prefix="/buses", tags=["buses"])
-app.include_router(library.router, prefix="/library", tags=["library"])
+app.include_router(library.router)
 app.include_router(rules.router, prefix="/rules", tags=["rules"])
 
 @app.get("/")
