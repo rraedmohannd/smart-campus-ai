@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../main.dart';
+import 'bus_gps_screen.dart';
 
 class BusScreen extends StatefulWidget {
   const BusScreen({super.key});
@@ -10,13 +12,86 @@ class BusScreen extends StatefulWidget {
 }
 
 class _BusScreenState extends State<BusScreen> {
-  final String _baseUrl = 'http://127.0.0.1:8000';
+  final String _baseUrl = 'http://localhost:8000';
   final TextEditingController _searchController = TextEditingController();
 
   bool _loading = true;
   String? _error;
   List<dynamic> _buses = [];
   String _searchQuery = '';
+
+  static const Color bgPrimary = Color(0xFF0A0E27);
+  static const Color bgSecondary = Color(0xFF1E0A3C);
+  static const Color neonCyan = Color(0xFF00F0FF);
+  static const Color electricBlue = Color(0xFF0080FF);
+  static const Color textPrimary = Colors.white;
+  static const Color textSecondary = Color(0xFFE0E0E0);
+  static const Color mutedText = Color(0xFFB8C1D9);
+
+  bool get _isArabic =>
+      SmartCampusApp.of(context).locale.languageCode == 'ar';
+
+  String get _screenTitle => _isArabic ? 'الباصات والنقل' : 'Bus & Transport';
+  String get _headerTitle => _isArabic ? 'نظام الباصات الذكي' : 'Smart Bus System';
+  String get _headerSubtitle => _isArabic
+      ? 'تتبّع الباصات الحية، وراقب المقاعد، والحالة، وافتح شاشة الـ GPS.'
+      : 'Track live buses, check seats, monitor status, and open GPS view.';
+  String get _busesLabel => _isArabic ? 'الباصات' : 'Buses';
+  String get _activeLabel => _isArabic ? 'النشطة' : 'Active';
+  String get _fullLabel => _isArabic ? 'ممتلئة' : 'Full';
+  String get _openGpsLabel => _isArabic ? 'فتح GPS' : 'Open GPS';
+  String get _searchHint => _isArabic
+      ? 'ابحث برقم الباص أو المسار أو السائق أو المنطقة أو الحالة...'
+      : 'Search by bus number, route, driver, area, or status...';
+
+  String get _driverLabel => _isArabic ? 'السائق' : 'Driver';
+  String get _pickupAreaLabel => _isArabic ? 'منطقة الانطلاق' : 'Pickup Area';
+  String get _destinationLabel => _isArabic ? 'الوجهة' : 'Destination';
+  String get _routeNameLabel => _isArabic ? 'اسم المسار' : 'Route Name';
+  String get _etaLabel => _isArabic ? 'وقت الوصول' : 'ETA';
+  String get _passengersLabel => _isArabic ? 'الركاب' : 'Passengers';
+  String get _availableSeatsLabel => _isArabic ? 'المقاعد المتاحة' : 'Available Seats';
+  String get _statusLabel => _isArabic ? 'الحالة' : 'Status';
+  String get _latitudeLabel => _isArabic ? 'خط العرض' : 'Latitude';
+  String get _longitudeLabel => _isArabic ? 'خط الطول' : 'Longitude';
+  String get _closeLabel => _isArabic ? 'إغلاق' : 'Close';
+  String get _refreshTooltip => _isArabic ? 'تحديث' : 'Refresh';
+  String get _gpsTooltip => 'GPS';
+
+  String get _noMatchingBusesTitle =>
+      _isArabic ? 'لا توجد باصات مطابقة' : 'No matching buses found';
+  String get _noMatchingBusesSubtitle => _isArabic
+      ? 'جرّب البحث بالمسار أو المنطقة أو السائق أو رقم الباص أو الحالة.'
+      : 'Try searching by route, area, driver, bus number, or status.';
+
+  String get _connectionErrorText =>
+      _isArabic ? 'خطأ في الاتصال' : 'Connection error';
+
+  String _serverErrorText(int code) =>
+      _isArabic ? 'خطأ من الخادم: $code' : 'Server error: $code';
+
+  String _busNumberText(dynamic number) =>
+      _isArabic ? 'الباص $number' : 'Bus $number';
+
+  String _etaText(dynamic minutes) =>
+      _isArabic ? '$minutes دقيقة' : '$minutes min';
+
+  String _seatsText(dynamic seats) =>
+      _isArabic ? '$seats مقاعد' : '$seats seats';
+
+  String _statusDisplay(String status) {
+    switch (status.toLowerCase()) {
+      case 'full':
+        return _isArabic ? 'ممتلئ' : 'Full';
+      case 'offline':
+        return _isArabic ? 'متوقف' : 'Offline';
+      case 'maintenance':
+        return _isArabic ? 'صيانة' : 'Maintenance';
+      case 'active':
+      default:
+        return _isArabic ? 'نشط' : 'Active';
+    }
+  }
 
   @override
   void initState() {
@@ -31,8 +106,15 @@ class _BusScreenState extends State<BusScreen> {
   }
 
   Future<void> _loadBuses() async {
+    if (!mounted) return;
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/buses/routes'));
+      final response = await http.get(Uri.parse('$_baseUrl/buses/live'));
 
       if (!mounted) return;
 
@@ -44,14 +126,14 @@ class _BusScreenState extends State<BusScreen> {
         });
       } else {
         setState(() {
-          _error = 'Server error: ${response.statusCode}';
+          _error = _serverErrorText(response.statusCode);
           _loading = false;
         });
       }
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'Connection error';
+        _error = _connectionErrorText;
         _loading = false;
       });
     }
@@ -59,7 +141,6 @@ class _BusScreenState extends State<BusScreen> {
 
   List<Map<String, dynamic>> get _filteredBuses {
     final query = _searchQuery.trim().toLowerCase();
-
     final buses = _buses.cast<Map<String, dynamic>>();
 
     if (query.isEmpty) return buses;
@@ -70,35 +151,42 @@ class _BusScreenState extends State<BusScreen> {
       final pickupArea = bus['pickup_area']?.toString().toLowerCase() ?? '';
       final destination = bus['destination']?.toString().toLowerCase() ?? '';
       final driver = bus['driver_name']?.toString().toLowerCase() ?? '';
+      final status = bus['status']?.toString().toLowerCase() ?? '';
 
       return busNumber.contains(query) ||
           routeName.contains(query) ||
           pickupArea.contains(query) ||
           destination.contains(query) ||
-          driver.contains(query);
+          driver.contains(query) ||
+          status.contains(query);
     }).toList();
   }
 
-  Color _getStatusColor(int seatsLeft, String status) {
-    final normalizedStatus = status.toLowerCase();
+  Color _getStatusColor(Map<String, dynamic> bus) {
+    final status = bus['status']?.toString().toLowerCase() ?? 'active';
 
-    if (normalizedStatus == 'maintenance') return const Color(0xFF6B7280);
-    if (normalizedStatus == 'inactive') return const Color(0xFF475569);
-    if (seatsLeft == 0 || normalizedStatus == 'full') {
-      return const Color(0xFFDC2626);
+    switch (status) {
+      case 'full':
+        return const Color(0xFFDC2626);
+      case 'offline':
+        return const Color(0xFF64748B);
+      case 'maintenance':
+        return const Color(0xFFF59E0B);
+      case 'active':
+      default:
+        return const Color(0xFF10B981);
     }
-    if (seatsLeft < 5) return const Color(0xFFF59E0B);
-    return const Color(0xFF10B981);
   }
 
-  String _getStatusLabel(int seatsLeft, String status) {
-    final normalizedStatus = status.toLowerCase();
+  String _getStatusLabel(Map<String, dynamic> bus) {
+    final status = bus['status']?.toString().toLowerCase() ?? 'active';
+    return _statusDisplay(status);
+  }
 
-    if (normalizedStatus == 'maintenance') return 'Maintenance';
-    if (normalizedStatus == 'inactive') return 'Inactive';
-    if (seatsLeft == 0 || normalizedStatus == 'full') return 'Full';
-    if (seatsLeft < 5) return 'Almost Full';
-    return 'Available';
+  double _toDouble(dynamic value) {
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0.0;
   }
 
   Widget _buildHeaderCard() {
@@ -108,22 +196,39 @@ class _BusScreenState extends State<BusScreen> {
       return status == 'active';
     }).length;
 
+    final fullCount = _buses.where((bus) {
+      final busMap = bus as Map<String, dynamic>;
+      final status = busMap['status']?.toString().toLowerCase() ?? '';
+      return status == 'full';
+    }).length;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 8, 20, 18),
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [
-            Color(0xFF0F172A),
-            Color(0xFF1E293B),
+            const Color(0xFF10204F).withOpacity(0.95),
+            const Color(0xFF1A0F49).withOpacity(0.95),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(26),
+        border: Border.all(
+          color: neonCyan.withOpacity(0.16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: neonCyan.withOpacity(0.08),
+            blurRadius: 24,
+            spreadRadius: 1,
+          ),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            _isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -131,8 +236,11 @@ class _BusScreenState extends State<BusScreen> {
                 width: 58,
                 height: 58,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF06B6D4).withOpacity(0.14),
+                  color: neonCyan.withOpacity(0.14),
                   borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: neonCyan.withOpacity(0.16),
+                  ),
                 ),
                 child: const Icon(
                   Icons.directions_bus_outlined,
@@ -141,22 +249,25 @@ class _BusScreenState extends State<BusScreen> {
                 ),
               ),
               const SizedBox(width: 14),
-              const Expanded(
+              Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      _isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Smart Bus System',
-                      style: TextStyle(
+                      _headerTitle,
+                      textAlign: _isArabic ? TextAlign.right : TextAlign.left,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 6),
+                    const SizedBox(height: 6),
                     Text(
-                      'Search routes, check ETA, and open each bus for full transport details.',
-                      style: TextStyle(
+                      _headerSubtitle,
+                      textAlign: _isArabic ? TextAlign.right : TextAlign.left,
+                      style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 13,
                         height: 1.5,
@@ -173,16 +284,58 @@ class _BusScreenState extends State<BusScreen> {
             runSpacing: 10,
             children: [
               _HeaderStatChip(
-                label: 'Routes',
+                label: _busesLabel,
                 value: _buses.length.toString(),
               ),
               _HeaderStatChip(
-                label: 'Active',
+                label: _activeLabel,
                 value: activeCount.toString(),
               ),
-              const _HeaderStatChip(
-                label: 'Mode',
-                value: 'Live Demo',
+              _HeaderStatChip(
+                label: _fullLabel,
+                value: fullCount.toString(),
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BusGpsScreen(
+                        buses: _buses.cast<Map<String, dynamic>>(),
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: neonCyan.withOpacity(0.14),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: neonCyan.withOpacity(0.18),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.gps_fixed_rounded,
+                        color: neonCyan,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _openGpsLabel,
+                        style: const TextStyle(
+                          color: neonCyan,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -195,14 +348,14 @@ class _BusScreenState extends State<BusScreen> {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        border: Border.all(color: neonCyan.withOpacity(0.10)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            color: neonCyan.withOpacity(0.03),
+            blurRadius: 18,
+            spreadRadius: 1,
           ),
         ],
       ),
@@ -213,11 +366,13 @@ class _BusScreenState extends State<BusScreen> {
             _searchQuery = value;
           });
         },
+        style: const TextStyle(color: textPrimary),
         decoration: InputDecoration(
-          hintText: 'Search by area, route, bus number, or driver...',
+          hintText: _searchHint,
+          hintStyle: const TextStyle(color: mutedText),
           prefixIcon: const Icon(
             Icons.search_rounded,
-            color: Color(0xFF64748B),
+            color: mutedText,
           ),
           suffixIcon: _searchQuery.isEmpty
               ? null
@@ -228,7 +383,7 @@ class _BusScreenState extends State<BusScreen> {
                       _searchQuery = '';
                     });
                   },
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const Icon(Icons.close_rounded, color: mutedText),
                 ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
@@ -241,158 +396,217 @@ class _BusScreenState extends State<BusScreen> {
   }
 
   void _showBusDetails(Map<String, dynamic> bus) {
-    final int seatsLeft = int.tryParse(bus['available_seats'].toString()) ?? 0;
-    final String rawStatus = bus['status']?.toString() ?? 'Unknown';
-    final Color statusColor = _getStatusColor(seatsLeft, rawStatus);
-    final String statusLabel = _getStatusLabel(seatsLeft, rawStatus);
+    final Color statusColor = _getStatusColor(bus);
+    final String statusLabel = _getStatusLabel(bus);
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
+        return FractionallySizedBox(
+          heightFactor: 0.86,
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 720),
-            padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF141A35).withOpacity(0.98),
+                  const Color(0xFF1B1038).withOpacity(0.98),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(30),
+              ),
+              border: Border.all(
+                color: neonCyan.withOpacity(0.14),
+              ),
             ),
-            child: SingleChildScrollView(
+            child: SafeArea(
+              top: false,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 58,
-                        height: 58,
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Icon(
-                          Icons.directions_bus_filled_outlined,
-                          color: statusColor,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 56,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.22),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                      children: [
+                        Row(
                           children: [
-                            Text(
-                              'Bus ${bus['bus_number']}',
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF0F172A),
+                            Container(
+                              width: 62,
+                              height: 62,
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Icon(
+                                Icons.directions_bus_filled_outlined,
+                                color: statusColor,
+                                size: 30,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              bus['route_name']?.toString() ?? 'Route',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF64748B),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: _isArabic
+                                    ? CrossAxisAlignment.end
+                                    : CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _busNumberText(bus['bus_number']),
+                                    textAlign: _isArabic ? TextAlign.right : TextAlign.left,
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    bus['route_name']?.toString() ??
+                                        (_isArabic ? 'مسار' : 'Route'),
+                                    textAlign: _isArabic ? TextAlign.right : TextAlign.left,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: mutedText,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.14),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                statusLabel,
+                                style: TextStyle(
+                                  color: statusColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.5,
+                                ),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 7,
+                        const SizedBox(height: 24),
+                        _detailTile(
+                          Icons.person_outline,
+                          _driverLabel,
+                          bus['driver_name']?.toString() ?? '-',
                         ),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(999),
+                        _detailTile(
+                          Icons.place_outlined,
+                          _pickupAreaLabel,
+                          bus['pickup_area']?.toString() ?? '-',
                         ),
-                        child: Text(
-                          statusLabel,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12.5,
-                          ),
+                        _detailTile(
+                          Icons.flag_outlined,
+                          _destinationLabel,
+                          bus['destination']?.toString() ?? '-',
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 22),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final isSmall = constraints.maxWidth < 560;
-
-                      return GridView.count(
-                        crossAxisCount: isSmall ? 1 : 2,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: isSmall ? 4.2 : 3.0,
-                        children: [
-                          _buildDetailTile(
-                            icon: Icons.person_outline,
-                            label: 'Driver',
-                            value: bus['driver_name']?.toString() ?? '-',
-                          ),
-                          _buildDetailTile(
-                            icon: Icons.place_outlined,
-                            label: 'From',
-                            value: bus['pickup_area']?.toString() ?? '-',
-                          ),
-                          _buildDetailTile(
-                            icon: Icons.flag_outlined,
-                            label: 'To',
-                            value: bus['destination']?.toString() ?? '-',
-                          ),
-                          _buildDetailTile(
-                            icon: Icons.schedule_outlined,
-                            label: 'ETA',
-                            value: '${bus['estimated_time_minutes']} min',
-                          ),
-                          _buildDetailTile(
-                            icon: Icons.groups_outlined,
-                            label: 'Passengers',
-                            value:
-                                '${bus['current_passengers']} / ${bus['capacity']}',
-                          ),
-                          _buildDetailTile(
-                            icon: Icons.event_seat_outlined,
-                            label: 'Seats Left',
-                            value: bus['available_seats']?.toString() ?? '0',
-                            valueColor: statusColor,
-                          ),
-                          _buildDetailTile(
-                            icon: Icons.info_outline_rounded,
-                            label: 'Status',
-                            value: rawStatus,
-                            valueColor: statusColor,
-                          ),
-                          _buildDetailTile(
-                            icon: Icons.route_outlined,
-                            label: 'Route Name',
-                            value: bus['route_name']?.toString() ?? '-',
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 22),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text(
-                        'Close',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
+                        _detailTile(
+                          Icons.route_outlined,
+                          _routeNameLabel,
+                          bus['route_name']?.toString() ?? '-',
                         ),
-                      ),
+                        _detailTile(
+                          Icons.schedule_outlined,
+                          _etaLabel,
+                          _etaText(bus['estimated_time_minutes']),
+                        ),
+                        _detailTile(
+                          Icons.groups_outlined,
+                          _passengersLabel,
+                          '${bus['current_passengers']} / ${bus['capacity']}',
+                        ),
+                        _detailTile(
+                          Icons.event_seat_outlined,
+                          _availableSeatsLabel,
+                          bus['available_seats']?.toString() ?? '0',
+                          valueColor: statusColor,
+                        ),
+                        _detailTile(
+                          Icons.info_outline_rounded,
+                          _statusLabel,
+                          _statusDisplay(bus['status']?.toString() ?? '-'),
+                          valueColor: statusColor,
+                        ),
+                        _detailTile(
+                          Icons.my_location_outlined,
+                          _latitudeLabel,
+                          _toDouble(bus['latitude']).toStringAsFixed(6),
+                        ),
+                        _detailTile(
+                          Icons.location_searching_outlined,
+                          _longitudeLabel,
+                          _toDouble(bus['longitude']).toStringAsFixed(6),
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.pop(context),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: textPrimary,
+                                  side: BorderSide(
+                                    color: neonCyan.withOpacity(0.18),
+                                  ),
+                                  minimumSize: const Size.fromHeight(54),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: Text(_closeLabel),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    this.context,
+                                    MaterialPageRoute(
+                                      builder: (_) => BusGpsScreen(
+                                        buses: _buses.cast<Map<String, dynamic>>(),
+                                        focusedBusId:
+                                            bus['bus_number']?.toString(),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: neonCyan,
+                                  foregroundColor: Colors.black,
+                                  minimumSize: const Size.fromHeight(54),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.gps_fixed_rounded),
+                                label: Text(_openGpsLabel),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -404,57 +618,56 @@ class _BusScreenState extends State<BusScreen> {
     );
   }
 
-  Widget _buildDetailTile({
-    required IconData icon,
-    required String label,
-    required String value,
+  Widget _detailTile(
+    IconData icon,
+    String label,
+    String value, {
     Color? valueColor,
   }) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.black.withOpacity(0.04)),
+        border: Border.all(
+          color: neonCyan.withOpacity(0.08),
+        ),
       ),
       child: Row(
         children: [
           Container(
-            width: 38,
-            height: 38,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
-              color: const Color(0xFF06B6D4).withOpacity(0.10),
+              color: neonCyan.withOpacity(0.10),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               icon,
-              size: 19,
-              color: const Color(0xFF06B6D4),
+              size: 20,
+              color: neonCyan,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
-            child: RichText(
-              text: TextSpan(
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  color: Color(0xFF475569),
-                ),
-                children: [
-                  TextSpan(
-                    text: '$label: ',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                  TextSpan(
-                    text: value,
-                    style: TextStyle(
-                      color: valueColor ?? const Color(0xFF475569),
-                    ),
-                  ),
-                ],
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                color: valueColor ?? textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -464,15 +677,13 @@ class _BusScreenState extends State<BusScreen> {
   }
 
   Widget _buildCompactBusCard(Map<String, dynamic> bus) {
-    final int seatsLeft = int.tryParse(bus['available_seats'].toString()) ?? 0;
-    final String rawStatus = bus['status']?.toString() ?? 'Unknown';
-    final Color statusColor = _getStatusColor(seatsLeft, rawStatus);
-    final String statusLabel = _getStatusLabel(seatsLeft, rawStatus);
+    final Color statusColor = _getStatusColor(bus);
+    final String statusLabel = _getStatusLabel(bus);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 14),
       child: Material(
-        color: Colors.white,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(24),
         child: InkWell(
           borderRadius: BorderRadius.circular(24),
@@ -480,13 +691,21 @@ class _BusScreenState extends State<BusScreen> {
           child: Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.white.withOpacity(0.05),
+                  Colors.white.withOpacity(0.03),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.black.withOpacity(0.04)),
+              border: Border.all(color: neonCyan.withOpacity(0.08)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
+                  color: neonCyan.withOpacity(0.03),
+                  blurRadius: 18,
+                  spreadRadius: 1,
                 ),
               ],
             ),
@@ -508,22 +727,25 @@ class _BusScreenState extends State<BusScreen> {
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment:
+                        _isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Bus ${bus['bus_number']}',
+                        _busNumberText(bus['bus_number']),
+                        textAlign: _isArabic ? TextAlign.right : TextAlign.left,
                         style: const TextStyle(
                           fontSize: 19,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF0F172A),
+                          color: textPrimary,
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         '${bus['pickup_area']} → ${bus['destination']}',
+                        textAlign: _isArabic ? TextAlign.right : TextAlign.left,
                         style: const TextStyle(
                           fontSize: 14,
-                          color: Color(0xFF475569),
+                          color: textSecondary,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -534,11 +756,15 @@ class _BusScreenState extends State<BusScreen> {
                         children: [
                           _MiniInfoChip(
                             icon: Icons.schedule_outlined,
-                            text: '${bus['estimated_time_minutes']} min',
+                            text: _etaText(bus['estimated_time_minutes']),
                           ),
                           _MiniInfoChip(
                             icon: Icons.event_seat_outlined,
-                            text: '${bus['available_seats']} seats',
+                            text: _seatsText(bus['available_seats']),
+                          ),
+                          _MiniInfoChip(
+                            icon: Icons.person_outline_rounded,
+                            text: bus['driver_name']?.toString() ?? '-',
                           ),
                         ],
                       ),
@@ -571,7 +797,7 @@ class _BusScreenState extends State<BusScreen> {
                     const Icon(
                       Icons.arrow_forward_ios_rounded,
                       size: 16,
-                      color: Color(0xFF94A3B8),
+                      color: mutedText,
                     ),
                   ],
                 ),
@@ -588,31 +814,34 @@ class _BusScreenState extends State<BusScreen> {
       margin: const EdgeInsets.fromLTRB(20, 10, 20, 0),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: neonCyan.withOpacity(0.08)),
       ),
-      child: const Column(
+      child: Column(
         children: [
-          Icon(
+          const Icon(
             Icons.search_off_rounded,
             size: 40,
-            color: Color(0xFF94A3B8),
+            color: mutedText,
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Text(
-            'No matching buses found',
-            style: TextStyle(
+            _isArabic ? 'لا توجد باصات مطابقة' : 'No matching buses found',
+            style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF0F172A),
+              color: textPrimary,
             ),
           ),
-          SizedBox(height: 6),
+          const SizedBox(height: 6),
           Text(
-            'Try searching by route, area, driver, or bus number.',
+            _isArabic
+                ? 'جرّب البحث بالمسار أو المنطقة أو السائق أو رقم الباص أو الحالة.'
+                : 'Try searching by route, area, driver, bus number, or status.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(0xFF64748B),
+            style: const TextStyle(
+              color: mutedText,
               height: 1.5,
             ),
           ),
@@ -623,7 +852,9 @@ class _BusScreenState extends State<BusScreen> {
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: neonCyan),
+      );
     }
 
     if (_error != null) {
@@ -632,13 +863,17 @@ class _BusScreenState extends State<BusScreen> {
           margin: const EdgeInsets.all(24),
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Colors.white.withOpacity(0.06),
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.redAccent.withOpacity(0.18),
+            ),
           ),
           child: Text(
             _error!,
+            textAlign: _isArabic ? TextAlign.right : TextAlign.left,
             style: const TextStyle(
-              color: Colors.red,
+              color: Colors.redAccent,
               fontSize: 15,
               fontWeight: FontWeight.w600,
             ),
@@ -650,6 +885,7 @@ class _BusScreenState extends State<BusScreen> {
     final buses = _filteredBuses;
 
     return RefreshIndicator(
+      color: neonCyan,
       onRefresh: _loadBuses,
       child: ListView(
         padding: const EdgeInsets.only(bottom: 20),
@@ -668,17 +904,67 @@ class _BusScreenState extends State<BusScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: bgPrimary,
       appBar: AppBar(
-        title: const Text(
-          'Bus & Transport',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          _screenTitle,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: textPrimary,
+          ),
         ),
-        backgroundColor: const Color(0xFFF8FAFC),
-        foregroundColor: const Color(0xFF0F172A),
+        backgroundColor: Colors.transparent,
+        foregroundColor: textPrimary,
         elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: _refreshTooltip,
+            onPressed: _loadBuses,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+          IconButton(
+            tooltip: _gpsTooltip,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BusGpsScreen(
+                    buses: _buses.cast<Map<String, dynamic>>(),
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.gps_fixed_rounded),
+          ),
+        ],
       ),
-      body: _buildBody(),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              bgPrimary,
+              bgSecondary,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -100,
+              left: -60,
+              child: _GlowCircle(color: neonCyan),
+            ),
+            Positioned(
+              bottom: -120,
+              right: -70,
+              child: _GlowCircle(color: electricBlue),
+            ),
+            _buildBody(),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -699,7 +985,9 @@ class _HeaderStatChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.08),
+        ),
       ),
       child: RichText(
         text: TextSpan(
@@ -740,8 +1028,11 @@ class _MiniInfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: Colors.white.withOpacity(0.06),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: _BusScreenState.neonCyan.withOpacity(0.08),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -749,16 +1040,41 @@ class _MiniInfoChip extends StatelessWidget {
           Icon(
             icon,
             size: 14,
-            color: const Color(0xFF64748B),
+            color: _BusScreenState.mutedText,
           ),
           const SizedBox(width: 6),
           Text(
             text,
             style: const TextStyle(
               fontSize: 12.5,
-              color: Color(0xFF475569),
+              color: _BusScreenState.textSecondary,
               fontWeight: FontWeight.w600,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GlowCircle extends StatelessWidget {
+  final Color color;
+
+  const _GlowCircle({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 240,
+      height: 240,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color.withOpacity(0.08),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.18),
+            blurRadius: 120,
+            spreadRadius: 26,
           ),
         ],
       ),

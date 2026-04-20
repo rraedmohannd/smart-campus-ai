@@ -231,6 +231,7 @@ demo_chat_fallbacks = {
 }
 demo_buses = [
     {
+        "id": "1",
         "bus_number": "1",
         "route_name": "Route 1",
         "driver_name": "Ahmad Khaled",
@@ -240,9 +241,12 @@ demo_buses = [
         "capacity": 22,
         "current_passengers": 8,
         "available_seats": 14,
-        "status": "active"
+        "status": "active",
+        "latitude": 31.9980,
+        "longitude": 35.9115
     },
     {
+        "id": "2",
         "bus_number": "2",
         "route_name": "Route 2",
         "driver_name": "Omar Ali",
@@ -252,9 +256,12 @@ demo_buses = [
         "capacity": 30,
         "current_passengers": 25,
         "available_seats": 5,
-        "status": "active"
+        "status": "active",
+        "latitude": 32.0235,
+        "longitude": 35.8590
     },
     {
+        "id": "3",
         "bus_number": "3",
         "route_name": "Route 3",
         "driver_name": "Yasser Ahmad",
@@ -264,9 +271,12 @@ demo_buses = [
         "capacity": 25,
         "current_passengers": 25,
         "available_seats": 0,
-        "status": "full"
+        "status": "full",
+        "latitude": 32.0170,
+        "longitude": 35.8395
     },
     {
+        "id": "4",
         "bus_number": "4",
         "route_name": "Route 4",
         "driver_name": "Yousef Sami",
@@ -276,6 +286,8 @@ demo_buses = [
         "capacity": 20,
         "current_passengers": 5,
         "available_seats": 15,
-        "status": "active"
+        "status": "active",
+        "latitude": 32.0158,
+        "longitude": 35.8732
     }
 ]

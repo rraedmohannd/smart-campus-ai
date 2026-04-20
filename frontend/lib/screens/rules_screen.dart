@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../main.dart';
 
 class RulesScreen extends StatefulWidget {
   const RulesScreen({super.key});
@@ -10,11 +11,56 @@ class RulesScreen extends StatefulWidget {
 }
 
 class _RulesScreenState extends State<RulesScreen> {
-  final String _baseUrl = 'http://127.0.0.1:8000';
+  final String _baseUrl = 'http://localhost:8000';
 
   bool _loading = true;
   String? _error;
   List<dynamic> _categories = [];
+  final Set<int> _expandedCategories = {};
+
+  static const Color bgPrimary = Color(0xFF0A0E27);
+  static const Color bgSecondary = Color(0xFF1E0A3C);
+  static const Color neonCyan = Color(0xFF00F0FF);
+  static const Color electricBlue = Color(0xFF0080FF);
+  static const Color textPrimary = Colors.white;
+  static const Color textSecondary = Color(0xFFE0E0E0);
+  static const Color mutedText = Color(0xFFB8C1D9);
+
+  bool get _isArabic =>
+      SmartCampusApp.of(context).locale.languageCode == 'ar';
+
+  String get _appBarTitle =>
+      _isArabic ? 'القوانين والسياسات' : 'Rules & Policies';
+
+  String get _headerTitle =>
+      _isArabic ? 'القوانين الجامعية' : 'University Rules';
+
+  String get _headerSubtitle => _isArabic
+      ? 'تصفح الأقسام أولًا، ثم افتح أي قسم لعرض القوانين الخاصة به.'
+      : 'Browse categories first, then open any category to view its rules.';
+
+  String get _categoriesLabel => _isArabic ? 'الأقسام' : 'Categories';
+  String get _rulesLabel => _isArabic ? 'القوانين' : 'Rules';
+  String get _statusLabel => _isArabic ? 'الحالة' : 'Status';
+  String get _activeLabel => _isArabic ? 'نشط' : 'Active';
+
+  String get _categoryFallback => _isArabic ? 'قسم' : 'Category';
+  String get _ruleFallback => _isArabic ? 'قانون' : 'Rule';
+
+  String _rulesInCategoryText(int count) => _isArabic
+      ? '$count قوانين في هذا القسم'
+      : '$count rules in this category';
+
+  String get _highPriorityText =>
+      _isArabic ? 'أولوية عالية' : 'High Priority';
+  String get _attentionText => _isArabic ? 'تنبيه' : 'Attention';
+  String get _infoText => _isArabic ? 'معلومة' : 'Info';
+
+  String _serverErrorText(int code) =>
+      _isArabic ? 'خطأ من الخادم: $code' : 'Server error: $code';
+
+  String get _connectionErrorText =>
+      _isArabic ? 'خطأ في الاتصال' : 'Connection error';
 
   @override
   void initState() {
@@ -41,37 +87,58 @@ class _RulesScreenState extends State<RulesScreen> {
       } else {
         setState(() {
           _loading = false;
-          _error = 'Server error: ${response.statusCode}';
+          _error = _serverErrorText(response.statusCode);
         });
       }
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Connection error';
+        _error = _connectionErrorText;
       });
     }
+  }
+
+  void _toggleCategory(int index) {
+    setState(() {
+      if (_expandedCategories.contains(index)) {
+        _expandedCategories.remove(index);
+      } else {
+        _expandedCategories.add(index);
+      }
+    });
   }
 
   Color _severityBackground(String severity) {
     switch (severity.toLowerCase()) {
       case 'danger':
-        return const Color(0xFFFEE2E2);
+        return const Color(0xFF2A1115);
       case 'warning':
-        return const Color(0xFFFFF7ED);
+        return const Color(0xFF2A1C10);
       default:
-        return const Color(0xFFEFF6FF);
+        return const Color(0xFF0F2035);
+    }
+  }
+
+  Color _severityBorder(String severity) {
+    switch (severity.toLowerCase()) {
+      case 'danger':
+        return const Color(0xFFDC2626);
+      case 'warning':
+        return const Color(0xFFF97316);
+      default:
+        return const Color(0xFF38BDF8);
     }
   }
 
   Color _severityForeground(String severity) {
     switch (severity.toLowerCase()) {
       case 'danger':
-        return const Color(0xFFDC2626);
+        return const Color(0xFFFF6B6B);
       case 'warning':
-        return const Color(0xFFEA580C);
+        return const Color(0xFFFFA24C);
       default:
-        return const Color(0xFF0284C7);
+        return const Color(0xFF67E8F9);
     }
   }
 
@@ -89,11 +156,11 @@ class _RulesScreenState extends State<RulesScreen> {
   String _severityLabel(String severity) {
     switch (severity.toLowerCase()) {
       case 'danger':
-        return 'High Priority';
+        return _highPriorityText;
       case 'warning':
-        return 'Attention';
+        return _attentionText;
       default:
-        return 'Info';
+        return _infoText;
     }
   }
 
@@ -122,18 +189,29 @@ class _RulesScreenState extends State<RulesScreen> {
       margin: const EdgeInsets.fromLTRB(20, 8, 20, 18),
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [
-            Color(0xFF0F172A),
-            Color(0xFF1E293B),
+            const Color(0xFF10204F).withOpacity(0.95),
+            const Color(0xFF1A0F49).withOpacity(0.95),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(26),
+        border: Border.all(
+          color: neonCyan.withOpacity(0.16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: neonCyan.withOpacity(0.08),
+            blurRadius: 24,
+            spreadRadius: 1,
+          ),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            _isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -141,8 +219,11 @@ class _RulesScreenState extends State<RulesScreen> {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF06B6D4).withOpacity(0.14),
+                  color: neonCyan.withOpacity(0.14),
                   borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: neonCyan.withOpacity(0.18),
+                  ),
                 ),
                 child: const Icon(
                   Icons.rule_folder_outlined,
@@ -151,22 +232,25 @@ class _RulesScreenState extends State<RulesScreen> {
                 ),
               ),
               const SizedBox(width: 14),
-              const Expanded(
+              Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      _isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'University Rules',
-                      style: TextStyle(
+                      _headerTitle,
+                      textAlign: _isArabic ? TextAlign.right : TextAlign.left,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 6),
+                    const SizedBox(height: 6),
                     Text(
-                      'Clear and organized access to academic, exam, library, behavior, and transport regulations.',
-                      style: TextStyle(
+                      _headerSubtitle,
+                      textAlign: _isArabic ? TextAlign.right : TextAlign.left,
+                      style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 13,
                         height: 1.5,
@@ -183,16 +267,16 @@ class _RulesScreenState extends State<RulesScreen> {
             runSpacing: 10,
             children: [
               _HeaderStatChip(
-                label: 'Categories',
+                label: _categoriesLabel,
                 value: _categories.length.toString(),
               ),
               _HeaderStatChip(
-                label: 'Rules',
+                label: _rulesLabel,
                 value: totalRules.toString(),
               ),
-              const _HeaderStatChip(
-                label: 'Status',
-                value: 'Active',
+              _HeaderStatChip(
+                label: _statusLabel,
+                value: _activeLabel,
               ),
             ],
           ),
@@ -203,17 +287,27 @@ class _RulesScreenState extends State<RulesScreen> {
 
   Widget _buildRuleCard(Map<String, dynamic> ruleMap) {
     final severity = ruleMap['severity']?.toString() ?? 'info';
+    final bg = _severityBackground(severity);
+    final border = _severityBorder(severity);
+    final fg = _severityForeground(severity);
 
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _severityBackground(severity),
+        color: bg,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: _severityForeground(severity).withOpacity(0.16),
+          color: border.withOpacity(0.35),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: border.withOpacity(0.08),
+            blurRadius: 16,
+            spreadRadius: 1,
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,19 +316,20 @@ class _RulesScreenState extends State<RulesScreen> {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: _severityForeground(severity).withOpacity(0.10),
+              color: fg.withOpacity(0.12),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
               _severityIcon(severity),
               size: 21,
-              color: _severityForeground(severity),
+              color: fg,
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  _isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 Wrap(
                   spacing: 8,
@@ -242,11 +337,12 @@ class _RulesScreenState extends State<RulesScreen> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
-                      ruleMap['title']?.toString() ?? 'Rule',
+                      ruleMap['title']?.toString() ?? _ruleFallback,
+                      textAlign: _isArabic ? TextAlign.right : TextAlign.left,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15.5,
-                        color: Color(0xFF0F172A),
+                        color: textPrimary,
                       ),
                     ),
                     Container(
@@ -255,7 +351,7 @@ class _RulesScreenState extends State<RulesScreen> {
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: _severityForeground(severity).withOpacity(0.10),
+                        color: fg.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
@@ -263,7 +359,7 @@ class _RulesScreenState extends State<RulesScreen> {
                         style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w700,
-                          color: _severityForeground(severity),
+                          color: fg,
                         ),
                       ),
                     ),
@@ -272,10 +368,11 @@ class _RulesScreenState extends State<RulesScreen> {
                 const SizedBox(height: 8),
                 Text(
                   ruleMap['text']?.toString() ?? '',
+                  textAlign: _isArabic ? TextAlign.right : TextAlign.left,
                   style: const TextStyle(
                     fontSize: 14,
                     height: 1.55,
-                    color: Color(0xFF334155),
+                    color: textSecondary,
                   ),
                 ),
               ],
@@ -286,75 +383,110 @@ class _RulesScreenState extends State<RulesScreen> {
     );
   }
 
-  Widget _buildCategoryCard(Map<String, dynamic> category) {
+  Widget _buildCategoryCard(Map<String, dynamic> category, int index) {
     final rules = (category['rules'] as List?) ?? [];
-    final categoryName = category['category_name']?.toString() ?? 'Category';
+    final categoryName = category['category_name']?.toString() ?? _categoryFallback;
+    final isExpanded = _expandedCategories.contains(index);
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeInOut,
       margin: const EdgeInsets.only(bottom: 18),
-      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.black.withOpacity(0.04),
+          color: neonCyan.withOpacity(0.12),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.035),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            color: neonCyan.withOpacity(0.04),
+            blurRadius: 20,
+            spreadRadius: 1,
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF06B6D4).withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  _categoryIcon(categoryName),
-                  color: const Color(0xFF06B6D4),
-                  size: 26,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      categoryName,
-                      style: const TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
+          InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: () => _toggleCategory(index),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: neonCyan.withOpacity(0.10),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: neonCyan.withOpacity(0.16),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${rules.length} rules in this category',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF64748B),
-                      ),
+                    child: Icon(
+                      _categoryIcon(categoryName),
+                      color: neonCyan,
+                      size: 26,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: _isArabic
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          categoryName,
+                          textAlign: _isArabic ? TextAlign.right : TextAlign.left,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _rulesInCategoryText(rules.length),
+                          textAlign: _isArabic ? TextAlign.right : TextAlign.left,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: mutedText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: isExpanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 220),
+                    child: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: Colors.white70,
+                      size: 28,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 16),
-          ...rules.map((rule) {
-            return _buildRuleCard(rule as Map<String, dynamic>);
-          }),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 220),
+            crossFadeState: isExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+              child: Column(
+                children: rules.map((rule) {
+                  return _buildRuleCard(rule as Map<String, dynamic>);
+                }).toList(),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -362,7 +494,11 @@ class _RulesScreenState extends State<RulesScreen> {
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(
+          color: neonCyan,
+        ),
+      );
     }
 
     if (_error != null) {
@@ -371,13 +507,17 @@ class _RulesScreenState extends State<RulesScreen> {
           margin: const EdgeInsets.all(24),
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Colors.white.withOpacity(0.06),
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.redAccent.withOpacity(0.12),
+            ),
           ),
           child: Text(
             _error!,
+            textAlign: _isArabic ? TextAlign.right : TextAlign.left,
             style: const TextStyle(
-              color: Colors.red,
+              color: Colors.redAccent,
               fontSize: 15,
               fontWeight: FontWeight.w600,
             ),
@@ -393,9 +533,12 @@ class _RulesScreenState extends State<RulesScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
-            children: _categories.map((category) {
-              return _buildCategoryCard(category as Map<String, dynamic>);
-            }).toList(),
+            children: List.generate(_categories.length, (index) {
+              return _buildCategoryCard(
+                _categories[index] as Map<String, dynamic>,
+                index,
+              );
+            }),
           ),
         ),
       ],
@@ -405,17 +548,32 @@ class _RulesScreenState extends State<RulesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: bgPrimary,
       appBar: AppBar(
-        title: const Text(
-          'Rules & Policies',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          _appBarTitle,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: textPrimary,
+          ),
         ),
-        backgroundColor: const Color(0xFFF8FAFC),
-        foregroundColor: const Color(0xFF0F172A),
+        backgroundColor: Colors.transparent,
+        foregroundColor: textPrimary,
         elevation: 0,
       ),
-      body: _buildBody(),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              bgPrimary,
+              bgSecondary,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: _buildBody(),
+      ),
     );
   }
 }

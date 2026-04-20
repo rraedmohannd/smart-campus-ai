@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'main.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -17,12 +18,39 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
+  bool get _isArabic =>
+      SmartCampusApp.of(context).locale.languageCode == 'ar';
+
+  String get _title => _isArabic ? 'سمارت كامبس AI' : 'Smart Campus AI';
+  String get _subtitle => _isArabic
+      ? 'تسجيل الدخول إلى النظام الذكي'
+      : 'Login to your smart campus system';
+
+  String get _studentIdHint =>
+      _isArabic ? 'الرقم الجامعي' : 'Student ID';
+  String get _passwordHint =>
+      _isArabic ? 'كلمة المرور' : 'Password';
+  String get _loginButton => _isArabic ? 'تسجيل الدخول' : 'Sign In';
+
+  String get _errorEmpty =>
+      _isArabic ? 'يرجى إدخال الرقم الجامعي وكلمة المرور'
+                : 'Please enter your student ID and password';
+
+  String get _errorInvalid =>
+      _isArabic ? 'بيانات الدخول غير صحيحة'
+                : 'Invalid credentials';
+
+  String get _errorConnection =>
+      _isArabic ? 'خطأ في الاتصال'
+                : 'Connection error. Please try again.';
+
   Future<void> _login() async {
     FocusScope.of(context).unfocus();
 
-    if (_idController.text.trim().isEmpty || _pwController.text.trim().isEmpty) {
+    if (_idController.text.trim().isEmpty ||
+        _pwController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your student ID and password')),
+        SnackBar(content: Text(_errorEmpty)),
       );
       return;
     }
@@ -33,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://127.0.0.1:8000/auth/login'),
+        Uri.parse('http://localhost:8000/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'student_id': _idController.text.trim(),
@@ -58,13 +86,13 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid credentials')),
+          SnackBar(content: Text(_errorInvalid)),
         );
       }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Connection error. Please try again.')),
+        SnackBar(content: Text(_errorConnection)),
       );
     } finally {
       if (!mounted) return;
@@ -83,246 +111,207 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const Color primary = Color(0xFF0F172A);
-    const Color accent = Color(0xFF06B6D4);
-    const Color textSecondary = Color(0xFF64748B);
+    const Color neonCyan = Color(0xFF00F0FF);
+    const Color electricBlue = Color(0xFF0080FF);
+    const Color textPrimary = Colors.white;
+    const Color textSecondary = Color(0xFFB8C1D9);
 
     return Scaffold(
-      body: Row(
-        children: [
-          Expanded(
-            flex: 6,
-            child: Container(
-              color: const Color(0xFFF8FAFC),
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 430),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            color: primary,
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: const Icon(
-                            Icons.auto_awesome_rounded,
-                            color: Colors.white,
-                            size: 30,
-                          ),
-                        ),
-                        const SizedBox(height: 28),
-                        const Text(
-                          'Welcome back',
-                          style: TextStyle(
-                            fontSize: 30,
-                            fontWeight: FontWeight.bold,
-                            color: primary,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'Sign in to access your smart campus services.',
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: textSecondary,
-                            height: 1.5,
-                          ),
-                        ),
-                        const SizedBox(height: 30),
-                        TextField(
-                          controller: _idController,
-                          decoration: InputDecoration(
-                            hintText: 'Enter your student ID',
-                            prefixIcon: const Icon(Icons.badge_outlined),
-                            suffixIcon: Container(
-                              margin: const EdgeInsets.all(10),
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: accent,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: _pwController,
-                          obscureText: _obscurePassword,
-                          decoration: InputDecoration(
-                            hintText: 'Enter your password',
-                            prefixIcon: const Icon(Icons.lock_outline_rounded),
-                            suffixIcon: IconButton(
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                              ),
-                            ),
-                          ),
-                          onSubmitted: (_) => _login(),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: _isLoading ? null : _login,
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.4,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text('Sign In'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF0A0E27),
+              Color(0xFF1E0A3C),
+            ],
           ),
-          Expanded(
-            flex: 5,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFF0F172A),
-                    Color(0xFF111827),
-                    Color(0xFF0B1120),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: 80,
-                    right: 80,
-                    child: Container(
-                      width: 180,
-                      height: 180,
-                      decoration: BoxDecoration(
-                        color: accent.withOpacity(0.12),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 100,
-                    left: 60,
-                    child: Container(
-                      width: 240,
-                      height: 240,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.all(40),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Smart Campus AI',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 34,
-                            fontWeight: FontWeight.bold,
-                            height: 1.2,
-                          ),
-                        ),
-                        SizedBox(height: 18),
-                        Text(
-                          'A modern smart campus platform for intelligent student services, transport, library access, and university guidance.',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 16,
-                            height: 1.7,
-                          ),
-                        ),
-                        SizedBox(height: 28),
-                        _FeaturePoint(
-                          icon: Icons.chat_bubble_outline_rounded,
-                          text: 'AI-powered student assistant',
-                        ),
-                        SizedBox(height: 12),
-                        _FeaturePoint(
-                          icon: Icons.directions_bus_outlined,
-                          text: 'Live transport and route overview',
-                        ),
-                        SizedBox(height: 12),
-                        _FeaturePoint(
-                          icon: Icons.local_library_outlined,
-                          text: 'Smart digital library experience',
-                        ),
-                        SizedBox(height: 12),
-                        _FeaturePoint(
-                          icon: Icons.rule_folder_outlined,
-                          text: 'Clear and accessible university rules',
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -120,
+              left: -80,
+              child: _glowCircle(neonCyan),
+            ),
+            Positioned(
+              bottom: -120,
+              right: -80,
+              child: _glowCircle(electricBlue),
+            ),
+
+            // 🌐 Language Switch Button
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.language, color: Colors.white),
+                onPressed: () {
+                  SmartCampusApp.of(context).toggleLocale();
+                },
               ),
             ),
+
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(30),
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFF10204F).withOpacity(0.9),
+                            const Color(0xFF1A0F49).withOpacity(0.9),
+                          ],
+                        ),
+                        border: Border.all(
+                          color: neonCyan.withOpacity(0.2),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: neonCyan.withOpacity(0.25),
+                            blurRadius: 40,
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Image.asset(
+                          'assets/images/logo.webp',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    Text(
+                      _title,
+                      style: const TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                        color: textPrimary,
+                        fontFamily: 'Pattanakarn',
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    Text(
+                      _subtitle,
+                      style: TextStyle(
+                        color: textSecondary.withOpacity(0.8),
+                        fontSize: 14,
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    Container(
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        color: Colors.white.withOpacity(0.05),
+                        border: Border.all(
+                          color: neonCyan.withOpacity(0.15),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          _neonField(
+                            controller: _idController,
+                            hint: _studentIdHint,
+                            icon: Icons.badge_outlined,
+                          ),
+                          const SizedBox(height: 16),
+                          _neonField(
+                            controller: _pwController,
+                            hint: _passwordHint,
+                            icon: Icons.lock_outline,
+                            isPassword: true,
+                          ),
+                          const SizedBox(height: 24),
+
+                          ElevatedButton(
+                            onPressed: _isLoading ? null : _login,
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.black,
+                                    ),
+                                  )
+                                : Text(_loginButton),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _glowCircle(Color color) {
+    return Container(
+      width: 260,
+      height: 260,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color.withOpacity(0.08),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.2),
+            blurRadius: 120,
+            spreadRadius: 30,
           ),
         ],
       ),
     );
   }
-}
 
-class _FeaturePoint extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _FeaturePoint({
-    required this.icon,
-    required this.text,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: Colors.white, size: 20),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ],
+  Widget _neonField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool isPassword = false,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: isPassword ? _obscurePassword : false,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: Icon(icon),
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_off
+                      : Icons.visibility,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+              )
+            : null,
+      ),
     );
   }
 }

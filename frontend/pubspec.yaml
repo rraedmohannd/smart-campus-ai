@@ -30,3 +30,9 @@ flutter:
   assets:
     - assets/images/logo.webp
     - assets/images/campus.jpg
+fonts:
+  - family: Pattanakarn
+    fonts:
+      - asset: assets/fonts/Pattanakarn-Regular.ttf
+      - asset: assets/fonts/Pattanakarn-ExtraBold.ttf
+        weight: 800    
