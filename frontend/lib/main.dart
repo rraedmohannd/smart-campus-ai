@@ -1,6 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'splash_screen.dart';
+
+import 'core/theme/app_colors.dart';
+import 'features/admin/admin_dashboard.dart';
+import 'features/auth/login_screen.dart';
+import 'features/auth/splash_screen.dart';
+import 'features/librarian/librarian_dashboard.dart';
+import 'features/student/bus_screen.dart';
+import 'features/student/chatbot_screen.dart';
+import 'features/student/library_screen.dart';
+import 'features/student/notifications_screen.dart';
+import 'features/student/profile_screen.dart';
+import 'features/student/rules_screen.dart';
+import 'features/student/student_dashboard.dart';
+import 'features/transport/transport_dashboard.dart';
 
 void main() {
   runApp(const SmartCampusApp());
@@ -8,12 +21,6 @@ void main() {
 
 class SmartCampusApp extends StatefulWidget {
   const SmartCampusApp({super.key});
-
-  static _SmartCampusAppState of(BuildContext context) {
-    final state = context.findAncestorStateOfType<_SmartCampusAppState>();
-    assert(state != null, 'No SmartCampusApp state found in context');
-    return state!;
-  }
 
   @override
   State<SmartCampusApp> createState() => _SmartCampusAppState();
@@ -43,19 +50,6 @@ class _SmartCampusAppState extends State<SmartCampusApp> {
 
   @override
   Widget build(BuildContext context) {
-    const Color bgPrimary = Color(0xFF0A0E27);
-    const Color bgSecondary = Color(0xFF1E0A3C);
-
-    const Color cardBase = Color(0xFF1A1F3A);
-
-    const Color neonCyan = Color(0xFF00F0FF);
-    const Color electricBlue = Color(0xFF0080FF);
-    const Color brightCyan = Color(0xFF00FFFF);
-
-    const Color textPrimary = Color(0xFFFFFFFF);
-    const Color textSecondary = Color(0xFFE0E0E0);
-    const Color mutedText = Color(0xFFB8C1D9);
-
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Smart Campus AI',
@@ -73,21 +67,20 @@ class _SmartCampusAppState extends State<SmartCampusApp> {
       theme: ThemeData.dark(useMaterial3: true),
       darkTheme: ThemeData(
         useMaterial3: true,
-        fontFamily: 'Arial',
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: bgPrimary,
+        scaffoldBackgroundColor: AppColors.bgDark1,
         colorScheme: const ColorScheme.dark(
-          primary: neonCyan,
-          secondary: electricBlue,
-          surface: cardBase,
-          tertiary: brightCyan,
+          primary: AppColors.cyan,
+          secondary: AppColors.purple3,
+          surface: AppColors.glass,
+          tertiary: AppColors.cyanDeep,
           onPrimary: Colors.black,
           onSecondary: Colors.white,
-          onSurface: textPrimary,
+          onSurface: AppColors.textPrimary,
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
-          foregroundColor: textPrimary,
+          foregroundColor: AppColors.textPrimary,
           elevation: 0,
           centerTitle: false,
         ),
@@ -95,44 +88,44 @@ class _SmartCampusAppState extends State<SmartCampusApp> {
           headlineLarge: TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.w800,
-            color: textPrimary,
-            letterSpacing: 0.2,
+            color: AppColors.textPrimary,
+            letterSpacing: 0,
           ),
           headlineMedium: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w700,
-            color: textPrimary,
+            color: AppColors.textPrimary,
           ),
           titleLarge: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: textPrimary,
+            color: AppColors.textPrimary,
           ),
           titleMedium: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: textPrimary,
+            color: AppColors.textPrimary,
           ),
           bodyLarge: TextStyle(
             fontSize: 16,
-            color: textSecondary,
+            color: AppColors.textSecondary,
             height: 1.4,
           ),
           bodyMedium: TextStyle(
             fontSize: 14,
-            color: mutedText,
+            color: AppColors.textMuted,
             height: 1.4,
           ),
           bodySmall: TextStyle(
             fontSize: 12,
-            color: mutedText,
+            color: AppColors.textMuted,
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: cardBase.withValues(alpha: 0.75),
+          fillColor: AppColors.glass.withValues(alpha: 0.75),
           hintStyle: const TextStyle(
-            color: mutedText,
+            color: AppColors.textMuted,
             fontSize: 14,
           ),
           contentPadding: const EdgeInsets.symmetric(
@@ -142,28 +135,28 @@ class _SmartCampusAppState extends State<SmartCampusApp> {
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(20),
             borderSide: BorderSide(
-              color: neonCyan.withValues(alpha: 0.18),
+              color: AppColors.cyan.withValues(alpha: 0.18),
               width: 1,
             ),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(20),
             borderSide: BorderSide(
-              color: neonCyan.withValues(alpha: 0.18),
+              color: AppColors.cyan.withValues(alpha: 0.18),
               width: 1,
             ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(20),
             borderSide: const BorderSide(
-              color: neonCyan,
+              color: AppColors.cyan,
               width: 1.4,
             ),
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: neonCyan,
+            backgroundColor: AppColors.purple3,
             foregroundColor: Colors.black,
             minimumSize: const Size(double.infinity, 56),
             elevation: 0,
@@ -178,9 +171,9 @@ class _SmartCampusAppState extends State<SmartCampusApp> {
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            foregroundColor: textPrimary,
+            foregroundColor: AppColors.textPrimary,
             side: BorderSide(
-              color: neonCyan.withValues(alpha: 0.35),
+              color: AppColors.purpleAccent.withValues(alpha: 0.35),
               width: 1,
             ),
             minimumSize: const Size(double.infinity, 56),
@@ -194,13 +187,13 @@ class _SmartCampusAppState extends State<SmartCampusApp> {
           ),
         ),
         cardTheme: CardThemeData(
-          color: cardBase.withValues(alpha: 0.26),
+          color: AppColors.glass.withValues(alpha: 0.26),
           elevation: 0,
           shadowColor: Colors.black.withValues(alpha: 0.40),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
             side: BorderSide(
-              color: neonCyan.withValues(alpha: 0.08),
+              color: AppColors.cyan.withValues(alpha: 0.08),
               width: 1,
             ),
           ),
@@ -219,8 +212,8 @@ class _SmartCampusAppState extends State<SmartCampusApp> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  bgPrimary,
-                  bgSecondary,
+                  AppColors.bgDark1,
+                  AppColors.bgDark3,
                 ],
               ),
             ),
@@ -228,7 +221,61 @@ class _SmartCampusAppState extends State<SmartCampusApp> {
           ),
         );
       },
+      onGenerateRoute: _generateRoute,
       home: const SplashScreen(),
     );
   }
+}
+
+Route<dynamic> _generateRoute(RouteSettings settings) {
+  final args = _routeArgs(settings.arguments);
+
+  Widget page;
+  switch (settings.name) {
+    case '/login':
+      page = const LoginScreen();
+      break;
+    case '/student-dashboard':
+      page = StudentDashboard(user: args);
+      break;
+    case '/student-chat':
+      page = ChatbotScreen(user: args);
+      break;
+    case '/student-bus':
+      page = BusScreen(user: args);
+      break;
+    case '/student-library':
+      page = LibraryScreen(user: args);
+      break;
+    case '/student-rules':
+      page = RulesScreen(user: args);
+      break;
+    case '/student-profile':
+      page = ProfileScreen(user: args);
+      break;
+    case '/student-notifications':
+      page = NotificationsScreen(user: args);
+      break;
+    case '/admin-dashboard':
+      page = AdminDashboard(user: args);
+      break;
+    case '/librarian-dashboard':
+      page = LibrarianDashboard(user: args);
+      break;
+    case '/transport-dashboard':
+      page = TransportDashboard(user: args);
+      break;
+    default:
+      page = const SplashScreen();
+  }
+
+  return MaterialPageRoute(builder: (_) => page, settings: settings);
+}
+
+Map<String, dynamic> _routeArgs(Object? arguments) {
+  if (arguments is Map<String, dynamic>) return arguments;
+  if (arguments is Map) {
+    return arguments.map((key, value) => MapEntry(key.toString(), value));
+  }
+  return const <String, dynamic>{};
 }
