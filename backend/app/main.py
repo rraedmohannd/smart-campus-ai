@@ -1,7 +1,19 @@
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import admin, auth, chat, buses, librarian, library, notifications, rules, transporter
+from app.routes import (
+    admin,
+    auth,
+    chat,
+    buses,
+    librarian,
+    library,
+    notifications,
+    robot,
+    rules,
+    transporter,
+)
 
 app = FastAPI(title="Smart Campus AI Demo")
 
@@ -15,6 +27,7 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(chat.router, prefix="/chat", tags=["chat"])
+app.include_router(robot.router, prefix="/robot", tags=["robot"])
 app.include_router(buses.router, prefix="/buses", tags=["buses"])
 app.include_router(library.router, prefix="/library", tags=["library"])
 app.include_router(rules.router, prefix="/rules", tags=["rules"])
@@ -32,3 +45,4 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
